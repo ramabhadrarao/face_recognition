@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Add Face Photo - {{ employee.full_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Add Face Photo</div>
+            <h2 class="page-title">{{ employee.full_name }}</h2>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="POST" id="addFaceForm">
+                            <input type="hidden" name="image_data" id="imageData">
+                            
+                            <!-- Camera Status -->
+                            <div id="cameraStatus" class="alert alert-info mb-3">
+                                <h4 class="alert-title">Camera Status</h4>
+                                <div id="statusDetails">Checking camera access...</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Camera Preview
+                                    <span id="faceIndicator" class="badge bg-secondary ms-2">Initializing...</span>
+                                </label>
+                                
+                                <!-- Camera Permission Instructions -->
+                                <div id="permissionInstructions" class="alert alert-warning" style="display: none;">
+                                    <h4 class="alert-title">
+                                        <i class="ti ti-alert-circle"></i> Camera Permission Required
+                                    </h4>
+                                    <p>To use the face recognition feature, you need to allow camera access.</p>
+                                    
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-primary" id="requestPermissionBtn">
+                                            <i class="ti ti-camera"></i> Allow Camera Access
+                                        </button>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <h5>Manual Instructions:</h5>
+                                    <div class="browser-instructions">
+                                        <div class="mb-2">
+                                            <strong>Chrome/Edge:</strong>
+                                            <ol>
+                                                <li>Click the camera icon in the address bar</li>
+                                                <li>Select "Allow" for <code>http://69.62.73.201:5999</code></li>
+                                                <li>Refresh the page</li>
+                                            </ol>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <strong>Firefox:</strong>
+                                            <ol>
+                                                <li>Click the lock/info icon in the address bar</li>
+                                                <li>Click on "Connection not secure"</li>
+                                                <li>Find "Use the Camera" and select "Allow"</li>
+                                                <li>Refresh the page</li>
+                                            </ol>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <strong>Safari:</strong>
+                                            <ol>
+                                                <li>Go to Safari → Preferences → Websites → Camera</li>
+                                                <li>Find <code>69.62.73.201:5999</code> and select "Allow"</li>
+                                                <li>Refresh the page</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="position-relative">
+                                    <video id="video" class="w-100" autoplay playsinline muted style="border-radius: 4px;"></video>
+                                    <canvas id="canvas" style="display: none;"></canvas>
+                                    <div class="face-guide"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-info w-100" id="captureBtn">
+                                    <i class="ti ti-camera"></i> Capture Photo
+                                </button>
+                            </div>
+                            
+                            <div id="preview" class="mb-3" style="display: none;">
+                                <label class="form-label">Captured Image</label>
+                                <img id="capturedImage" class="w-100" style="border-radius: 4px;">
+                            </div>
+                            
+                            <div class="d-flex">
+                                <a href="{{ url_for('employee_details', employee_id=employee.id) }}" class="btn btn-link">Cancel</a>
+                                <button type="submit" class="btn btn-primary ms-auto" id="submitBtn" disabled>
+                                    <i class="ti ti-check"></i> Add Face Photo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Employee Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-5">Employee ID:</dt>
+                            <dd class="col-7">{{ employee.employee_id }}</dd>
+                            
+                            <dt class="col-5">Name:</dt>
+                            <dd class="col-7">{{ employee.full_name }}</dd>
+                            
+                            <dt class="col-5">Department:</dt>
+                            <dd class="col-7">{{ employee.department or 'N/A' }}</dd>
+                            
+                            <dt class="col-5">Current Photos:</dt>
+                            <dd class="col-7">
+                                <span class="badge bg-info">{{ employee.face_images|length }}</span>
+                            </dd>
+                        </dl>
+                        
+                        <div class="alert alert-info">
+                            <h4 class="alert-title">Why Add Multiple Photos?</h4>
+                            <p class="mb-0">Adding multiple face photos from different angles and lighting conditions improves recognition accuracy. We recommend:</p>
+                            <ul class="mb-0 mt-2">
+                                <li>Front-facing photo (primary)</li>
+                                <li>Slight left angle</li>
+                                <li>Slight right angle</li>
+                                <li>With/without glasses (if applicable)</li>
+                                <li>Different lighting conditions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.face-guide {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 250px;
+    border: 2px dashed rgba(255,255,255,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+#video {
+    background-color: #000;
+    min-height: 300px;
+}
+</style>
+
+<script>
+// Simple camera initialization for add face page
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const captureBtn = document.getElementById('captureBtn');
+const imageDataInput = document.getElementById('imageData');
+const preview = document.getElementById('preview');
+const capturedImage = document.getElementById('capturedImage');
+const submitBtn = document.getElementById('submitBtn');
+
+let stream = null;
+
+// Start camera
+async function startCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true,
+            audio: false
+        });
+        
+        video.srcObject = stream;
+        video.play();
+        
+        document.getElementById('cameraStatus').className = 'alert alert-success mb-3';
+        document.getElementById('statusDetails').textContent = 'Camera is ready';
+        
+    } catch (err) {
+        console.error('Camera error:', err);
+        document.getElementById('cameraStatus').className = 'alert alert-danger mb-3';
+        document.getElementById('statusDetails').textContent = 'Camera error: ' + err.message;
+    }
+}
+
+// Capture photo
+captureBtn.addEventListener('click', () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    
+    const imageData = canvas.toDataURL('image/jpeg', 0.95);
+    imageDataInput.value = imageData;
+    capturedImage.src = imageData;
+    preview.style.display = 'block';
+    submitBtn.disabled = false;
+});
+
+// Initialize
+startCamera();
+</script>
+{% endblock %}

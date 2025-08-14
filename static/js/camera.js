@@ -492,13 +492,22 @@ if (requestPermissionBtn) {
 }
 
 // Form validation
-document.getElementById('addSubjectForm').addEventListener('submit', function(e) {
-    if (!imageDataInput.value) {
-        e.preventDefault();
-        alert('Please capture a photo first');
-        return false;
-    }
-});
+// Form validation - handle both forms
+// Form validation - handle all forms
+const subjectForm = document.getElementById('addSubjectForm');
+const employeeForm = document.getElementById('addEmployeeForm');
+const faceForm = document.getElementById('addFaceForm');
+const form = subjectForm || employeeForm || faceForm;
+
+if (form) {
+    form.addEventListener('submit', function(e) {
+        if (!imageDataInput.value) {
+            e.preventDefault();
+            alert('Please capture a photo first');
+            return false;
+        }
+    });
+}
 
 // Initialize camera when DOM is ready
 async function initialize() {

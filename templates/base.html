@@ -16,6 +16,9 @@
         <!-- Navbar -->
         <header class="navbar navbar-expand-md navbar-light d-print-none">
             <div class="container-xl">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
                 <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
                     <i class="ti ti-face-id"></i> Face Recognition
                 </h1>
@@ -43,20 +46,36 @@
                                     <span class="nav-link-title">Dashboard</span>
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('add_subject') }}">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#navbar-base" data-bs-toggle="dropdown" role="button" aria-expanded="false">
                                     <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                        <i class="ti ti-user-plus"></i>
+                                        <i class="ti ti-users"></i>
                                     </span>
-                                    <span class="nav-link-title">Add Subject</span>
+                                    <span class="nav-link-title">Employees</span>
+                                </a>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="{{ url_for('add_employee') }}">
+                                        <i class="ti ti-user-plus me-1"></i> Add Employee
+                                    </a>
+                                    <a class="dropdown-item" href="{{ url_for('dashboard') }}">
+                                        <i class="ti ti-list me-1"></i> View All
+                                    </a>
+                                </div>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('attendance') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-clock"></i>
+                                    </span>
+                                    <span class="nav-link-title">Attendance</span>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('recognize') }}">
+                                <a class="nav-link" href="{{ url_for('reports') }}">
                                     <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                        <i class="ti ti-scan"></i>
+                                        <i class="ti ti-report"></i>
                                     </span>
-                                    <span class="nav-link-title">Recognize</span>
+                                    <span class="nav-link-title">Reports</span>
                                 </a>
                             </li>
                         </ul>
@@ -75,6 +94,34 @@
                         {% for category, message in messages %}
                             <div class="alert alert-{{ category }} alert-dismissible" role="alert">
                                 <div class="d-flex">
+                                    <div>
+                                        {% if category == 'success' %}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                <path d="M5 12l5 5l10 -10"/>
+                                            </svg>
+                                        {% elif category == 'danger' %}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                <circle cx="12" cy="12" r="9"/>
+                                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                            </svg>
+                                        {% elif category == 'warning' %}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                <path d="M12 9v2m0 4v.01"/>
+                                                <path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"/>
+                                            </svg>
+                                        {% else %}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                                <circle cx="12" cy="12" r="9"/>
+                                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                            </svg>
+                                        {% endif %}
+                                    </div>
                                     <div>{{ message }}</div>
                                 </div>
                                 <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
@@ -85,6 +132,31 @@
                 
                 {% block content %}{% endblock %}
             </div>
+            
+            <!-- Footer -->
+            <footer class="footer footer-transparent d-print-none">
+                <div class="container-xl">
+                    <div class="row text-center align-items-center flex-row-reverse">
+                        <div class="col-lg-auto ms-lg-auto">
+                            <ul class="list-inline list-inline-dots mb-0">
+                                <li class="list-inline-item">
+                                    <a href="{{ url_for('dashboard') }}" class="link-secondary">Dashboard</a>
+                                </li>
+                                <li class="list-inline-item">
+                                    <a href="{{ url_for('reports') }}" class="link-secondary">Reports</a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+                            <ul class="list-inline list-inline-dots mb-0">
+                                <li class="list-inline-item">
+                                    &copy; 2025 Face Recognition System. All rights reserved.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
     </div>
     

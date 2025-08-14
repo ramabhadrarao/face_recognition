@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.full_name }} - Face Recognition{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Employee Details</div>
+            <h2 class="page-title">{{ employee.full_name }}</h2>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+            <div class="btn-list">
+                <a href="{{ url_for('add_face', employee_id=employee.id) }}" class="btn btn-primary">
+                    <i class="ti ti-camera-plus"></i> Add Face Photo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="avatar avatar-xl me-3">{{ employee.full_name[0].upper() }}</div>
+                            <div>
+                                <h3 class="mb-0">{{ employee.full_name }}</h3>
+                                <div class="text-muted">{{ employee.employee_id }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <i class="ti ti-mail"></i> {{ employee.email }}
+                        </div>
+                        {% if employee.phone %}
+                        <div class="mb-2">
+                            <i class="ti ti-phone"></i> {{ employee.phone }}
+                        </div>
+                        {% endif %}
+                        <div class="mb-2">
+                            <i class="ti ti-building"></i> {{ employee.department or 'N/A' }}
+                        </div>
+                        <div class="mb-2">
+                            <i class="ti ti-id"></i> {{ employee.designation or 'N/A' }}
+                        </div>
+                        <div class="mb-2">
+                            <i class="ti ti-calendar"></i> Joined: {{ employee.date_joined.strftime('%B %d, %Y') }}
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-2">
+                            <strong>Face Photos:</strong> {{ employee.face_images|length }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Monthly Salary:</strong> ₹{{ "{:,.2f}".format(employee.salary) }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Status:</strong> 
+                            <span class="badge bg-{{ 'success' if employee.is_active else 'danger' }}">
+                                {{ 'Active' if employee.is_active else 'Inactive' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h3 class="card-title">Current Month Summary</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card card-sm">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <span class="bg-primary text-white avatar">
+                                                    <i class="ti ti-calendar-check"></i>
+                                                </span>
+                                            </div>
+                                            <div class="col">
+                                                <div class="font-weight-medium">Working Days</div>
+                                                <div class="text-muted">{{ working_days|length }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card card-sm">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <span class="bg-info text-white avatar">
+                                                    <i class="ti ti-clock"></i>
+                                                </span>
+                                            </div>
+                                            <div class="col">
+                                                <div class="font-weight-medium">Total Hours</div>
+                                                <div class="text-muted">{{ "%.2f"|format(total_hours) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card card-sm">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <span class="bg-success text-white avatar">
+                                                    <i class="ti ti-currency-rupee"></i>
+                                                </span>
+                                            </div>
+                                            <div class="col">
+                                                <div class="font-weight-medium">Calculated Salary</div>
+                                                <div class="text-muted">₹{{ "{:,.2f}".format(calculated_salary) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card card-sm">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <span class="bg-warning text-white avatar">
+                                                    <i class="ti ti-percentage"></i>
+                                                </span>
+                                            </div>
+                                            <div class="col">
+                                                <div class="font-weight-medium">Attendance</div>
+                                                <div class="text-muted">{{ "%.1f"|format((working_days|length / 22 * 100)) }}%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Attendance Logs - {{ logs[0].timestamp.strftime('%B %Y') if logs else 'Current Month' }}</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Clock In</th>
+                                    <th>Clock Out</th>
+                                    <th>Hours</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for date, times in working_days.items() %}
+                                <tr>
+                                    <td>{{ date.strftime('%d %b %Y') }}</td>
+                                    <td>
+                                        {% if times.in %}
+                                        <span class="badge bg-success">{{ times.in|ist_format('%I:%M %p') }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if times.out %}
+                                        <span class="badge bg-danger">{{ times.out|ist_format('%I:%M %p') }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if times.in and times.out %}
+                                        {{ "%.2f"|format((times.out - times.in).total_seconds() / 3600) }} hrs
+                                        {% elif times.in and not times.out and date == date.today() %}
+                                        {{ "%.2f"|format((datetime.now() - times.in).total_seconds() / 3600) }} hrs (ongoing)
+                                        {% elif times.in and not times.out %}
+                                        <span class="text-warning">No clock out</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% for log in logs if log.timestamp.date() == date %}
+                                            {% if log.similarity_score %}
+                                            <small>{{ "%.1f"|format(log.similarity_score * 100) }}%</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">
+                                        No attendance records for this month
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

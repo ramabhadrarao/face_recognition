@@ -9,8 +9,8 @@
             <h2 class="page-title">Dashboard</h2>
         </div>
         <div class="col-auto ms-auto d-print-none">
-            <a href="{{ url_for('add_subject') }}" class="btn btn-primary">
-                <i class="ti ti-plus"></i> Add New Subject
+            <a href="{{ url_for('add_employee') }}" class="btn btn-primary">
+                <i class="ti ti-plus"></i> Add New Employee
             </a>
         </div>
     </div>
@@ -18,36 +18,124 @@
 
 <div class="page-body">
     <div class="container-xl">
-        <div class="row row-cards">
+        <!-- Statistics Cards -->
+        <div class="row row-deck row-cards mb-3">
+            <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="subheader">Total Employees</div>
+                        </div>
+                        <div class="h1 mb-0">{{ employees|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="subheader">Present Today</div>
+                        </div>
+                        <div class="h1 mb-0 text-green">{{ attendance_summary|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="subheader">Absent Today</div>
+                        </div>
+                        <div class="h1 mb-0 text-red">{{ employees|length - attendance_summary|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="subheader">Attendance Rate</div>
+                        </div>
+                        <div class="h1 mb-0">
+                            {% if employees|length > 0 %}
+                                {{ "%.1f"|format((attendance_summary|length / employees|length * 100)) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Employee List -->
+        <div class="row">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Registered Subjects</h3>
+                        <h3 class="card-title">Registered Employees</h3>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-vcenter card-table">
                             <thead>
                                 <tr>
-                                    <th>Subject Name</th>
+                                    <th>Employee ID</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Email</th>
+                                    <th>Face Photos</th>
+                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% if subjects %}
-                                    {% for subject in subjects %}
+                                {% if employees %}
+                                    {% for employee in employees %}
                                     <tr>
-                                        <td>{{ subject }}</td>
+                                        <td>{{ employee.employee_id }}</td>
                                         <td>
-                                            <button class="btn btn-danger btn-sm" onclick="deleteSubject('{{ subject }}')">
-                                                <i class="ti ti-trash"></i> Delete
-                                            </button>
+                                            <div class="d-flex py-1 align-items-center">
+                                                <span class="avatar me-2 avatar-sm">{{ employee.full_name[0].upper() }}</span>
+                                                <div class="flex-fill">
+                                                    <div class="font-weight-medium">{{ employee.full_name }}</div>
+                                                    <div class="text-muted"><small>{{ employee.designation or 'N/A' }}</small></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ employee.department or 'N/A' }}</td>
+                                        <td>{{ employee.email }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ employee.face_images|length }}</span>
+                                        </td>
+                                        <td>
+                                            {% if employee.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-list flex-nowrap">
+                                                <a href="{{ url_for('employee_details', employee_id=employee.id) }}" 
+                                                   class="btn btn-sm btn-primary">
+                                                    <i class="ti ti-eye"></i> View
+                                                </a>
+                                                <a href="{{ url_for('add_face', employee_id=employee.id) }}" 
+                                                   class="btn btn-sm btn-info">
+                                                    <i class="ti ti-camera-plus"></i>
+                                                </a>
+                                                <button class="btn btn-sm btn-danger" 
+                                                        onclick="deleteEmployee({{ employee.id }}, '{{ employee.full_name }}')">
+                                                    <i class="ti ti-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td colspan="2" class="text-center text-muted">
-                                            No subjects registered yet
+                                        <td colspan="7" class="text-center text-muted">
+                                            No employees registered yet
                                         </td>
                                     </tr>
                                 {% endif %}
@@ -57,13 +145,66 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Today's Attendance Summary -->
+        {% if attendance_summary %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Today's Attendance</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>First In</th>
+                                    <th>Last Out</th>
+                                    <th>Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in attendance_summary %}
+                                <tr>
+                                    <td>{{ record.full_name }}</td>
+                                    <td>
+                                        {% if record.first_in %}
+                                            <span class="badge bg-success">{{ record.first_in|ist_format('%I:%M %p') }}</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.last_out and record.last_out != record.first_in %}
+                                            <span class="badge bg-danger">{{ record.last_out|ist_format('%I:%M %p') }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Not clocked out</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.first_in and record.last_out and record.last_out != record.first_in %}
+                                            {{ "%.2f"|format((record.last_out - record.first_in).total_seconds() / 3600) }} hrs
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
 <script>
-function deleteSubject(subjectName) {
-    if (confirm(`Are you sure you want to delete ${subjectName}?`)) {
-        fetch(`/api/delete_subject/${subjectName}`, {
+function deleteEmployee(employeeId, employeeName) {
+    if (confirm(`Are you sure you want to delete ${employeeName}?`)) {
+        fetch(`/api/delete_employee/${employeeId}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -74,7 +215,7 @@ function deleteSubject(subjectName) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Failed to delete subject');
+                alert('Failed to delete employee: ' + (data.error || 'Unknown error'));
             }
         })
         .catch(error => {

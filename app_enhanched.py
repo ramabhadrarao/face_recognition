@@ -31,12 +31,16 @@ def get_ist_time():
 
 def utc_to_ist(utc_dt):
     """Convert UTC datetime to IST"""
+    if utc_dt is None:
+        return None
     if utc_dt.tzinfo is None:
         utc_dt = pytz.UTC.localize(utc_dt)
     return utc_dt.astimezone(Config.TIMEZONE)
 
 def ist_to_utc(ist_dt):
     """Convert IST datetime to UTC for database storage"""
+    if ist_dt is None:
+        return None
     if ist_dt.tzinfo is None:
         ist_dt = Config.TIMEZONE.localize(ist_dt)
     return ist_dt.astimezone(pytz.UTC).replace(tzinfo=None)
@@ -56,19 +60,6 @@ def ist_format_filter(dt, format='%d %b %Y %I:%M %p'):
         ist_time = utc_to_ist(dt)
         return ist_time.strftime(format)
     return ''
-
-app = Flask(__name__)
-app.config.from_object(Config)
-
-# Initialize extensions
-db.init_app(app)
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-# Create tables
-with app.app_context():
-    db.create_all()
 
 # Simple User class
 class User(UserMixin):
@@ -341,7 +332,7 @@ def employee_details(employee_id):
                 valid_working_days += 0.5
     
     # Salary calculation based on actual working days
-    working_days_in_month = 22  # Standard working days
+    working_days_in_month = Config.WORKING_DAYS_PER_MONTH
     daily_rate = employee.salary / working_days_in_month
     calculated_salary = daily_rate * valid_working_days
     
@@ -385,31 +376,44 @@ def api_clock():
         
         if response.status_code == 200:
             result = response.json()
+            print(f"Recognition result: {json.dumps(result, indent=2)}")
             
             if result.get('result') and len(result['result']) > 0:
                 face = result['result'][0]
                 
                 if face.get('subjects') and len(face['subjects']) > 0:
                     subject = face['subjects'][0]
-                    similarity = subject['similarity']
+                    similarity = subject.get('similarity', 0)
+                    subject_name = subject.get('subject', '')
+                    
+                    print(f"Recognized: {subject_name} with similarity {similarity}")
                     
                     # Check if similarity meets threshold
                     if similarity < Config.SIMILARITY_THRESHOLD:
                         return jsonify({
                             'success': False,
-                            'message': 'Face not recognized with sufficient confidence'
+                            'message': f'Face not recognized with sufficient confidence (similarity: {similarity:.2%})'
                         }), 200
                     
                     # Find employee by subject name
                     employee = Employee.query.filter_by(
-                        subject_name=subject['subject']
+                        subject_name=subject_name
                     ).first()
                     
                     if not employee:
-                        return jsonify({
-                            'success': False,
-                            'message': 'Employee not found in database'
-                        }), 200
+                        print(f"Employee not found for subject: {subject_name}")
+                        # Try to find by partial match if exact match fails
+                        all_employees = Employee.query.filter_by(is_active=True).all()
+                        for emp in all_employees:
+                            if emp.subject_name == subject_name:
+                                employee = emp
+                                break
+                        
+                        if not employee:
+                            return jsonify({
+                                'success': False,
+                                'message': f'Employee not found in database for subject: {subject_name}'
+                            }), 200
                     
                     # Check for recent logs to prevent duplicates
                     current_time_utc = datetime.utcnow()
@@ -457,15 +461,16 @@ def api_clock():
                 else:
                     return jsonify({
                         'success': False,
-                        'message': 'Face not recognized'
+                        'message': 'Face detected but not recognized. Please ensure you are registered in the system.'
                     }), 200
             else:
                 return jsonify({
                     'success': False,
-                    'message': 'No face detected'
+                    'message': 'No face detected in the image. Please ensure your face is clearly visible.'
                 }), 200
         else:
-            return jsonify({'error': 'Recognition failed'}), 400
+            print(f"CompreFace error: {response.status_code} - {response.text}")
+            return jsonify({'error': f'Recognition failed: {response.text}'}), 400
             
     except Exception as e:
         print(f"Clock Error: {str(e)}")
@@ -526,7 +531,7 @@ def reports():
                     total_days += 0.5
         
         # Calculate salary
-        working_days_in_month = 22
+        working_days_in_month = Config.WORKING_DAYS_PER_MONTH
         daily_rate = employee.salary / working_days_in_month
         calculated_salary = daily_rate * total_days
         
