@@ -87,7 +87,7 @@
                                             </div>
                                             <div class="col">
                                                 <div class="font-weight-medium">Working Days</div>
-                                                <div class="text-muted">{{ working_days|length }}</div>
+                                                <div class="text-muted">{{ "%.1f"|format(total_days_worked) }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -103,8 +103,25 @@
                                                 </span>
                                             </div>
                                             <div class="col">
-                                                <div class="font-weight-medium">Total Hours</div>
-                                                <div class="text-muted">{{ "%.2f"|format(total_hours) }}</div>
+                                                <div class="font-weight-medium">Regular Hours</div>
+                                                <div class="text-muted">{{ "%.2f"|format(total_regular_hours) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="card card-sm">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-auto">
+                                                <span class="bg-warning text-white avatar">
+                                                    <i class="ti ti-clock-plus"></i>
+                                                </span>
+                                            </div>
+                                            <div class="col">
+                                                <div class="font-weight-medium">Overtime Hours</div>
+                                                <div class="text-muted">{{ "%.2f"|format(total_overtime_hours) }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -120,29 +137,49 @@
                                                 </span>
                                             </div>
                                             <div class="col">
-                                                <div class="font-weight-medium">Calculated Salary</div>
-                                                <div class="text-muted">₹{{ "{:,.2f}".format(calculated_salary) }}</div>
+                                                <div class="font-weight-medium">Total Salary</div>
+                                                <div class="text-muted">₹{{ "{:,.2f}".format(total_salary) }}</div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-sm-6 col-lg-3">
-                                <div class="card card-sm">
-                                    <div class="card-body">
-                                        <div class="row align-items-center">
-                                            <div class="col-auto">
-                                                <span class="bg-warning text-white avatar">
-                                                    <i class="ti ti-percentage"></i>
-                                                </span>
-                                            </div>
-                                            <div class="col">
-                                                <div class="font-weight-medium">Attendance</div>
-                                                <div class="text-muted">{{ "%.1f"|format((working_days|length / 22 * 100)) }}%</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                        </div>
+                        
+                        <!-- Salary Breakdown -->
+                        <div class="card mt-3">
+                            <div class="card-body">
+                                <h4>Salary Calculation</h4>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Monthly Salary (MS):</td>
+                                        <td class="text-end">₹{{ "{:,.2f}".format(employee.salary) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Working Days per Month (WD):</td>
+                                        <td class="text-end">{{ config.WORKING_DAYS_PER_MONTH }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Daily Salary (DS = MS/WD):</td>
+                                        <td class="text-end">₹{{ "{:,.2f}".format(daily_salary) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Hourly Salary (HS = DS/8):</td>
+                                        <td class="text-end">₹{{ "{:,.2f}".format(hourly_salary) }}</td>
+                                    </tr>
+                                    <tr class="table-active">
+                                        <td><strong>Basic Salary ({{ "%.1f"|format(total_days_worked) }} days):</strong></td>
+                                        <td class="text-end"><strong>₹{{ "{:,.2f}".format(basic_salary) }}</strong></td>
+                                    </tr>
+                                    <tr class="table-active">
+                                        <td><strong>Overtime Pay ({{ "%.2f"|format(total_overtime_hours) }} hrs × ₹{{ "{:,.2f}".format(hourly_salary * 0.5) }}):</strong></td>
+                                        <td class="text-end"><strong>₹{{ "{:,.2f}".format(overtime_pay) }}</strong></td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <td><strong>Total Salary:</strong></td>
+                                        <td class="text-end"><strong>₹{{ "{:,.2f}".format(total_salary) }}</strong></td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -182,14 +219,22 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if times.in and times.out %}
-                                        {{ "%.2f"|format((times.out - times.in).total_seconds() / 3600) }} hrs
-                                        {% elif times.in and not times.out and date == date.today() %}
-                                        {{ "%.2f"|format((datetime.now() - times.in).total_seconds() / 3600) }} hrs (ongoing)
-                                        {% elif times.in and not times.out %}
-                                        <span class="text-warning">No clock out</span>
+                                        {% if times.calc %}
+                                            {% if times.calc.total_hours > 0 %}
+                                                <span class="text-primary">{{ "%.2f"|format(times.calc.regular_hours) }} hrs</span>
+                                                {% if times.calc.overtime_hours > 0 %}
+                                                    + <span class="text-warning">{{ "%.2f"|format(times.calc.overtime_hours) }} OT</span>
+                                                {% endif %}
+                                                {% if times.calc.status == 'ongoing' %}
+                                                    <span class="badge bg-info ms-1">ongoing</span>
+                                                {% endif %}
+                                            {% elif times.calc.status == 'incomplete' %}
+                                                <span class="text-danger">Incomplete</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
                                         {% else %}
-                                        <span class="text-muted">-</span>
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td>

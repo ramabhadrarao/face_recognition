@@ -9,10 +9,16 @@
             <h2 class="page-title">Monthly Attendance Report</h2>
         </div>
         <div class="col-auto ms-auto d-print-none">
-            <form method="GET" class="d-flex">
-                <input type="month" name="month" value="{{ month }}" class="form-control me-2">
+            <form method="GET" action="{{ url_for('reports') }}" class="d-flex align-items-center">
+                <select name="policy" class="form-select me-2" style="width: auto;" onchange="this.form.submit()">
+                    <option value="NO_PAY" {% if policy == 'NO_PAY' %}selected{% endif %}>No Pay for Incomplete Days</option>
+                    <option value="HALF_DAY" {% if policy == 'HALF_DAY' %}selected{% endif %}>Half Day for Incomplete Days</option>
+                    <option value="FULL_DAY" {% if policy == 'FULL_DAY' %}selected{% endif %}>Full Day for Incomplete Days</option>
+                    <option value="ACTUAL_HOURS" {% if policy == 'ACTUAL_HOURS' %}selected{% endif %}>Pay by Actual Hours</option>
+                </select>
+                <input type="month" name="month" value="{{ month }}" class="form-control me-2" style="width: auto;">
                 <button type="submit" class="btn btn-primary">
-                    <i class="ti ti-filter"></i> Filter
+                    <i class="ti ti-filter"></i> Generate Report
                 </button>
             </form>
         </div>
@@ -24,6 +30,20 @@
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Employee Attendance Summary - {{ month }}</h3>
+                <div class="ms-auto text-muted">
+                    <strong>Policy:</strong> 
+                    {% if policy == 'NO_PAY' %}
+                        <span class="badge bg-danger">No Pay for Incomplete Days</span>
+                    {% elif policy == 'HALF_DAY' %}
+                        <span class="badge bg-warning">Half Day for Incomplete Days</span>
+                    {% elif policy == 'FULL_DAY' %}
+                        <span class="badge bg-info">Full Day for Incomplete Days</span>
+                    {% elif policy == 'ACTUAL_HOURS' %}
+                        <span class="badge bg-success">Pay by Actual Hours</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Unknown Policy: {{ policy }}</span>
+                    {% endif %}
+                </div>
                 <div class="card-actions">
                     <button class="btn btn-sm btn-success" onclick="exportToExcel()">
                         <i class="ti ti-file-spreadsheet"></i> Export Excel
@@ -41,10 +61,13 @@
                             <th>Name</th>
                             <th>Department</th>
                             <th>Days Present</th>
-                            <th>Total Hours</th>
+                            <th>Regular Hours</th>
+                            <th>OT Hours</th>
                             <th>Base Salary</th>
-                            <th>Calculated Salary</th>
-                            <th>Status</th>
+                            <th>Basic Pay</th>
+                            <th>OT Pay</th>
+                            <th>Total Salary</th>
+                            <th>Attendance</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -59,16 +82,31 @@
                             <td>{{ data.employee.department or 'N/A' }}</td>
                             <td>
                                 <span class="badge bg-{{ 'success' if data.total_days >= 20 else 'warning' if data.total_days >= 15 else 'danger' }}">
-                                    {{ data.total_days }}
+                                    {{ "%.1f"|format(data.total_days) }}
                                 </span>
                             </td>
-                            <td>{{ data.total_hours }}</td>
-                            <td>₹{{ "{:,.2f}".format(data.employee.salary) }}</td>
+                            <td>{{ data.total_regular_hours }}</td>
                             <td>
-                                <strong>₹{{ "{:,.2f}".format(data.calculated_salary) }}</strong>
+                                {% if data.total_overtime_hours > 0 %}
+                                    <span class="text-warning">{{ data.total_overtime_hours }}</span>
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                            <td>₹{{ "{:,.2f}".format(data.employee.salary) }}</td>
+                            <td>₹{{ "{:,.2f}".format(data.basic_salary) }}</td>
+                            <td>
+                                {% if data.overtime_pay > 0 %}
+                                    <span class="text-warning">₹{{ "{:,.2f}".format(data.overtime_pay) }}</span>
+                                {% else %}
+                                    ₹0
+                                {% endif %}
                             </td>
                             <td>
-                                {% set attendance_percent = (data.total_days / 22 * 100) %}
+                                <strong>₹{{ "{:,.2f}".format(data.total_salary) }}</strong>
+                            </td>
+                            <td>
+                                {% set attendance_percent = (data.total_days / 26 * 100) %}
                                 <div class="progress" style="width: 100px;">
                                     <div class="progress-bar bg-{{ 'success' if attendance_percent >= 90 else 'warning' if attendance_percent >= 75 else 'danger' }}" 
                                          style="width: {{ attendance_percent }}%">
@@ -81,15 +119,20 @@
                     </tbody>
                     <tfoot>
                         <tr class="fw-bold">
-                            <td colspan="5">Total</td>
-                            <td>₹{{ "{:,.2f}".format(employees_data|sum(attribute='employee.salary')) }}</td>
-                            <td>₹{{ "{:,.2f}".format(employees_data|sum(attribute='calculated_salary')) }}</td>
+                            <td colspan="4">Total</td>
+                            <td>{{ "%.0f"|format(employees_data|sum(attribute='total_regular_hours')) }}</td>
+                            <td>{{ "%.0f"|format(employees_data|sum(attribute='total_overtime_hours')) }}</td>
+                            <td>-</td>
+                            <td>₹{{ "{:,.2f}".format(employees_data|sum(attribute='basic_salary')) }}</td>
+                            <td>₹{{ "{:,.2f}".format(employees_data|sum(attribute='overtime_pay')) }}</td>
+                            <td>₹{{ "{:,.2f}".format(employees_data|sum(attribute='total_salary')) }}</td>
                             <td></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
         </div>
+        
         
         <div class="row mt-3">
             <div class="col-md-3">
@@ -104,23 +147,119 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="subheader">Total Working Days</div>
-                        <div class="h1 mb-0">{{ employees_data|sum(attribute='total_days') }}</div>
+                        <div class="h1 mb-0">{{ "%.1f"|format(employees_data|sum(attribute='total_days')) }}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-                        <div class="subheader">Total Hours</div>
-                        <div class="h1 mb-0">{{ "%.0f"|format(employees_data|sum(attribute='total_hours')) }}</div>
+                        <div class="subheader">Total Regular Hours</div>
+                        <div class="h1 mb-0">{{ "%.0f"|format(employees_data|sum(attribute='total_regular_hours')) }}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="subheader">Total OT Hours</div>
+                        <div class="h1 mb-0 text-warning">{{ "%.0f"|format(employees_data|sum(attribute='total_overtime_hours')) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-2">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="subheader">Total Basic Pay</div>
+                        <div class="h1 mb-0">₹{{ "{:,.0f}".format(employees_data|sum(attribute='basic_salary')) }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="subheader">Total OT Pay</div>
+                        <div class="h1 mb-0 text-warning">₹{{ "{:,.0f}".format(employees_data|sum(attribute='overtime_pay')) }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
                         <div class="subheader">Total Payroll</div>
-                        <div class="h1 mb-0">₹{{ "{:,.0f}".format(employees_data|sum(attribute='calculated_salary')) }}</div>
+                        <div class="h1 mb-0 text-success">₹{{ "{:,.0f}".format(employees_data|sum(attribute='total_salary')) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Policy Impact Analysis</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">This shows how different policies would affect an employee with incomplete attendance:</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Scenario</th>
+                                        <th>NO_PAY Policy</th>
+                                        <th>HALF_DAY Policy</th>
+                                        <th>FULL_DAY Policy</th>
+                                        <th>ACTUAL_HOURS Policy</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Employee works 0.01 hours (only clocks IN)</strong></td>
+                                        <td class="text-danger">₹0 (No payment)</td>
+                                        <td class="text-warning">₹192.31 (Half day)</td>
+                                        <td class="text-info">₹384.62 (Full day)</td>
+                                        <td class="text-success">₹0.48 (0.01 × ₹48.08)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Employee works 4 hours (half day)</strong></td>
+                                        <td>₹192.31 (Half day)</td>
+                                        <td>₹192.31 (Half day)</td>
+                                        <td>₹192.31 (Half day)</td>
+                                        <td class="text-success">₹192.31 (4 × ₹48.08)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Employee works 10 hours (2 hrs OT)</strong></td>
+                                        <td colspan="4" class="text-center">₹432.70 (Full day + 2 hrs OT @ 50%) - Same for all policies</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <div class="d-flex">
+                                <div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <circle cx="12" cy="12" r="9"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="alert-title">Policy Recommendations</h4>
+                                    <ul class="mb-0">
+                                        <li><strong>NO_PAY:</strong> Strictest policy, prevents time theft but may be harsh for genuine issues</li>
+                                        <li><strong>HALF_DAY:</strong> Balanced approach, gives some credit for attendance</li>
+                                        <li><strong>FULL_DAY:</strong> Most generous, good for trusted employees</li>
+                                        <li><strong>ACTUAL_HOURS:</strong> Fairest for part-time or flexible workers</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -131,7 +270,7 @@
 <script>
 function exportToExcel() {
     // Simple export to CSV
-    let csv = 'Employee ID,Name,Department,Days Present,Total Hours,Base Salary,Calculated Salary,Attendance %\n';
+    let csv = 'Employee ID,Name,Department,Days Present,Regular Hours,OT Hours,Base Salary,Basic Pay,OT Pay,Total Salary,Attendance %\n';
     
     const table = document.getElementById('reportTable');
     const rows = table.querySelectorAll('tbody tr');
@@ -144,9 +283,12 @@ function exportToExcel() {
             cells[2].textContent,
             cells[3].textContent.trim(),
             cells[4].textContent,
-            cells[5].textContent.replace('₹', '').replace(/,/g, ''),
-            cells[6].textContent.replace('₹', '').replace(/,/g, '').trim(),
-            cells[7].textContent.trim()
+            cells[5].textContent,
+            cells[6].textContent.replace('₹', '').replace(/,/g, ''),
+            cells[7].textContent.replace('₹', '').replace(/,/g, ''),
+            cells[8].textContent.replace('₹', '').replace(/,/g, '').trim(),
+            cells[9].textContent.replace('₹', '').replace(/,/g, '').trim(),
+            cells[10].textContent.trim()
         ];
         csv += rowData.join(',') + '\n';
     });

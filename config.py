@@ -28,6 +28,7 @@ class Config:
     SIMILARITY_THRESHOLD = 0.97  # Minimum similarity for recognition
     
     # Salary calculation settings
-    WORKING_DAYS_PER_MONTH = 22
-    INCOMPLETE_DAY_POLICY = 'HALF_DAY'  # Options: 'HALF_DAY', 'NO_PAY', 'FULL_DAY'
-    MINIMUM_HOURS_FOR_FULL_DAY = 6  # Minimum hours to count as full day
+    WORKING_DAYS_PER_MONTH = 26  # Changed from 22 to 26
+    OVERTIME_MULTIPLIER = 0.5  # 50% extra for overtime hours
+    INCOMPLETE_DAY_POLICY = 'NO_PAY'  # Options: 'HALF_DAY', 'NO_PAY', 'FULL_DAY'
+    MINIMUM_HOURS_FOR_FULL_DAY = 8  # Minimum hours to count as full day
