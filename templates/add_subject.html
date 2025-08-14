@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Add Subject - Face Recognition{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">Add New Subject</h2>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="POST" id="addSubjectForm">
+                            <div class="mb-3">
+                                <label class="form-label">Subject Name</label>
+                                <input type="text" name="subject_name" class="form-control" placeholder="Enter person's name" required>
+                            </div>
+                            <input type="hidden" name="image_data" id="imageData">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Camera Preview 
+                                    <span id="faceIndicator" class="badge bg-secondary ms-2">Initializing...</span>
+                                </label>
+                                
+                                <!-- Camera Permission Instructions -->
+                                <div id="permissionInstructions" class="alert alert-warning" style="display: none;">
+                                    <h4 class="alert-title">
+                                        <i class="ti ti-alert-circle"></i> Camera Permission Required
+                                    </h4>
+                                    <p>To use the face recognition feature, you need to allow camera access.</p>
+                                    
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-primary" id="requestPermissionBtn">
+                                            <i class="ti ti-camera"></i> Allow Camera Access
+                                        </button>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <h5>Manual Instructions:</h5>
+                                    <div class="browser-instructions">
+                                        <div class="mb-2">
+                                            <strong>Chrome/Edge:</strong>
+                                            <ol>
+                                                <li>Click the camera icon in the address bar</li>
+                                                <li>Select "Allow" for <code>http://69.62.73.201:5999</code></li>
+                                                <li>Refresh the page</li>
+                                            </ol>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <strong>Firefox:</strong>
+                                            <ol>
+                                                <li>Click the lock/info icon in the address bar</li>
+                                                <li>Click on "Connection not secure"</li>
+                                                <li>Find "Use the Camera" and select "Allow"</li>
+                                                <li>Refresh the page</li>
+                                            </ol>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <strong>Safari:</strong>
+                                            <ol>
+                                                <li>Go to Safari → Preferences → Websites → Camera</li>
+                                                <li>Find <code>69.62.73.201:5999</code> and select "Allow"</li>
+                                                <li>Refresh the page</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-info mt-3">
+                                        <div class="d-flex">
+                                            <div>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                    <circle cx="12" cy="12" r="9"></circle>
+                                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <h4 class="alert-title">Why HTTP instead of HTTPS?</h4>
+                                                <div class="text-muted">
+                                                    This is a local development server. For production use, HTTPS should be implemented for secure camera access.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="position-relative">
+                                    <video id="video" class="w-100" autoplay playsinline muted style="border-radius: 4px;"></video>
+                                    <canvas id="canvas" style="display: none;"></canvas>
+                                    <!-- Face guide overlay -->
+                                    <div class="face-guide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 250px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; pointer-events: none;"></div>
+                                </div>
+                                <!-- Zoom controls will be inserted here by JavaScript -->
+                            </div>
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-info w-100" id="captureBtn">
+                                    <i class="ti ti-camera"></i> Capture Photo
+                                </button>
+                            </div>
+                            <div id="preview" class="mb-3" style="display: none;">
+                                <label class="form-label">Captured Image</label>
+                                <img id="capturedImage" class="w-100" style="border-radius: 4px;">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="submitBtn" disabled>
+                                <i class="ti ti-check"></i> Add Subject
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Camera Controls & Tips</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="cameraStatus" class="alert alert-info">
+                            <h4 class="alert-title">Camera Status</h4>
+                            <div id="statusDetails">Checking camera access...</div>
+                        </div>
+                        
+                        <h4>Camera Features:</h4>
+                        <ul>
+                            <li><strong>Auto Zoom:</strong> Click the "Auto" button to automatically frame your face</li>
+                            <li><strong>Manual Zoom:</strong> Use the slider or +/- buttons to adjust zoom</li>
+                            <li><strong>Face Detection:</strong> Check the indicator to ensure your face is detected</li>
+                        </ul>
+                        
+                        <h4 class="mt-3">Tips for Best Results:</h4>
+                        <ol>
+                            <li>Wait for "Face Detected" indicator</li>
+                            <li>Use Auto-frame for optimal positioning</li>
+                            <li>Ensure good lighting on your face</li>
+                            <li>Keep a neutral expression</li>
+                            <li>Make sure only one face is in frame</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+{% endblock %}

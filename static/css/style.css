@@ -1,0 +1,172 @@
+/* Previous styles remain the same, add these: */
+
+/* Browser instructions */
+.browser-instructions {
+    background: rgba(0,0,0,0.05);
+    padding: 15px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.browser-instructions code {
+    background: rgba(0,0,0,0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.85rem;
+}
+
+.browser-instructions ol {
+    margin-bottom: 0;
+    padding-left: 20px;
+}
+
+#permissionInstructions {
+    margin-bottom: 20px;
+}
+
+#requestPermissionBtn {
+    font-size: 1.1rem;
+    padding: 10px 30px;
+}
+
+/* Camera status */
+#cameraStatus {
+    transition: all 0.3s ease;
+}
+
+#statusDetails {
+    font-size: 0.9rem;
+    margin-top: 5px;
+}/* Custom styles */
+.page {
+    min-height: 100vh;
+}
+
+video {
+    background-color: #000;
+    max-height: 400px;
+    width: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+canvas {
+    max-width: 100%;
+}
+
+.avatar-sm {
+    background-color: #206bc4;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: .25em;
+}
+
+/* Camera container */
+.camera-container {
+    position: relative;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Video container for zoom */
+.position-relative {
+    overflow: hidden;
+    border-radius: 4px;
+    position: relative;
+    background: #000;
+    min-height: 300px;
+}
+
+/* Camera error overlay */
+.camera-error-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+/* Results formatting */
+#results .alert {
+    margin-bottom: 0;
+}
+
+/* Face guide */
+.face-guide {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 250px;
+    border: 2px dashed rgba(255,255,255,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Zoom controls */
+.zoom-controls {
+    background: rgba(0,0,0,0.05);
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.zoom-controls .form-range {
+    margin: 0 10px;
+}
+
+.zoom-controls button {
+    min-width: 40px;
+}
+
+.zoom-controls .alert {
+    margin-bottom: 10px;
+    padding: 0.5rem 1rem;
+}
+
+/* Face indicator */
+#faceIndicator {
+    font-size: 0.75rem;
+}
+
+/* Button states */
+.btn-success {
+    transition: all 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .page-header {
+        padding: 1rem 0;
+    }
+    
+    video {
+        max-height: 300px;
+    }
+    
+    .zoom-controls {
+        font-size: 0.875rem;
+    }
+    
+    .zoom-controls button {
+        padding: 0.25rem 0.5rem;
+    }
+}

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Recognize Face - Face Recognition{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">Face Recognition</h2>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Camera Preview</label>
+                            <div class="position-relative">
+                                <video id="video" class="w-100" autoplay playsinline muted style="border-radius: 4px;"></video>
+                                <canvas id="canvas" style="display: none;"></canvas>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-primary w-100" id="recognizeBtn">
+                                <i class="ti ti-scan"></i> Recognize Face
+                            </button>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="liveMode">
+                            <label class="form-check-label" for="liveMode">
+                                Live Recognition Mode (every 2 seconds)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recognition Results</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="results">
+                            <p class="text-muted text-center">Click "Recognize Face" to start</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const recognizeBtn = document.getElementById('recognizeBtn');
+const liveModeCheckbox = document.getElementById('liveMode');
+const resultsDiv = document.getElementById('results');
+
+let stream = null;
+let liveInterval = null;
+
+// Start camera
+async function startCamera() {
+    try {
+        // Stop any existing stream
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: { min: 320, ideal: 640, max: 1280 },
+                height: { min: 240, ideal: 480, max: 720 },
+                facingMode: 'user'
+            },
+            audio: false
+        });
+        
+        video.srcObject = stream;
+        
+        // Ensure video plays
+        video.onloadedmetadata = () => {
+            video.play().catch(err => {
+                console.error('Error playing video:', err);
+            });
+        };
+        
+    } catch (err) {
+        console.error('Error accessing camera:', err);
+        alert('Could not access camera');
+    }
+}
+
+// Capture and recognize
+async function recognizeFace() {
+    // Ensure video has dimensions
+    if (!video.videoWidth || !video.videoHeight) {
+        console.log('Video not ready');
+        return;
+    }
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    
+    resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+    
+    try {
+        const response = await fetch('/api/recognize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: imageData })
+        });
+        
+        const data = await response.json();
+        displayResults(data);
+    } catch (error) {
+        console.error('Error:', error);
+        resultsDiv.innerHTML = '<div class="alert alert-danger">Recognition failed</div>';
+    }
+}
+
+// Display results
+function displayResults(data) {
+    if (data.result && data.result.length > 0) {
+        const face = data.result[0];
+        if (face.subjects && face.subjects.length > 0) {
+            const subject = face.subjects[0];
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h4 class="alert-title">Face Recognized!</h4>
+                    <div class="text-muted">
+                        <strong>Subject:</strong> ${subject.subject}<br>
+                        <strong>Similarity:</strong> ${(subject.similarity * 100).toFixed(2)}%<br>
+                        <strong>Confidence:</strong> ${(face.det_probability * 100).toFixed(2)}%
+                    </div>
+                </div>
+            `;
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <h4 class="alert-title">Unknown Face</h4>
+                    <div class="text-muted">Face detected but not recognized</div>
+                </div>
+            `;
+        }
+    } else {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-info">
+                <h4 class="alert-title">No Face Detected</h4>
+                <div class="text-muted">Please ensure your face is clearly visible</div>
+            </div>
+        `;
+    }
+}
+
+// Event listeners
+recognizeBtn.addEventListener('click', recognizeFace);
+
+liveModeCheckbox.addEventListener('change', function() {
+    if (this.checked) {
+        liveInterval = setInterval(recognizeFace, 2000);
+        recognizeBtn.disabled = true;
+    } else {
+        clearInterval(liveInterval);
+        recognizeBtn.disabled = false;
+    }
+});
+
+// Initialize
+startCamera();
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+});
+</script>
+{% endblock %}

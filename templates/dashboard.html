@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Face Recognition{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">Dashboard</h2>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+            <a href="{{ url_for('add_subject') }}" class="btn btn-primary">
+                <i class="ti ti-plus"></i> Add New Subject
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Registered Subjects</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th>Subject Name</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if subjects %}
+                                    {% for subject in subjects %}
+                                    <tr>
+                                        <td>{{ subject }}</td>
+                                        <td>
+                                            <button class="btn btn-danger btn-sm" onclick="deleteSubject('{{ subject }}')">
+                                                <i class="ti ti-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">
+                                            No subjects registered yet
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteSubject(subjectName) {
+    if (confirm(`Are you sure you want to delete ${subjectName}?`)) {
+        fetch(`/api/delete_subject/${subjectName}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to delete subject');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+}
+</script>
+{% endblock %}
